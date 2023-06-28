@@ -422,10 +422,12 @@ def redshift_factor(radius, angle, incl, bh_mass, b_):
 
 if __name__ == "__main__":
     M = 1
+
     solver_params = {
         "initial_guesses": 10,
         "midpoint_iterations": 10,
         "plot_inbetween": False,
         "minP": 3.01 * M,
     }
+
     # writeFramesEq13(5, solver_params=solver_params)

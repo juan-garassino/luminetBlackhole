@@ -19,6 +19,7 @@ class BlackHole:
         """Initialise black hole with mass and accretion rate
         Set viewer inclination above equatorial plane
         """
+        self.old_inclination = inclination
         self.t = inclination * np.pi / 180
         self.M = mass
         self.acc = acc  # accretion rate
@@ -234,7 +235,7 @@ class BlackHole:
         else:
             self.isoradials[radius] = {order: isoradial}
 
-    def calc_isoradials(self, direct_r: [], ghost_r: []):
+    def calc_isoradials(self, direct_r: list, ghost_r: list):
         progress_bar = tqdm(
             range(len(direct_r) + len(ghost_r)), position=0, leave=False
         )
@@ -270,7 +271,7 @@ class BlackHole:
             )
             self.add_isoradial(isoradial, radius, 0)
 
-    def plot_isoradials(self, direct_r: [], ghost_r: [], show=False):
+    def plot_isoradials(self, direct_r: list, ghost_r: list, show=False):
         """Given an array of radii for the direct image and/or ghost image, plots the corresponding
         isoradials.
         Calculates the isoradials according to self.root_params
@@ -316,15 +317,17 @@ class BlackHole:
             for radius in direct_r:
                 _ax = plot_ellipse(radius, _ax, self.t)
         if self.plot_params["plot_core"]:
-            _ax = self.plot_apparent_inner_edge(_ax, "red")
+            _ax = self.plot_apparent_inner_edge(_ax, "--")
 
         plt.title(f"Isoradials for M={self.M}", color=self.plot_params["text_color"])
         if show:
-            plt.show()
+            plt.close()
+
         if self.plot_params["save_plot"]:
             name = self.plot_params["title"].replace(" ", "_")
             name = name.replace("°", "")
             _fig.savefig(name, dpi=300, facecolor=self.plot_params["face_color"])
+
         return _fig, _ax
 
     def write_frames(self, func, direct_r=None, ghost_r=None, step_size=5):
@@ -339,7 +342,7 @@ class BlackHole:
         steps = np.linspace(0, 180, 1 + (0 - 180) // step_size)
         for a in tqdm(steps, position=0, desc="Writing frames"):
             self.t = a
-            bh.plot_params["title"] = "inclination = {:03}°".format(int(a))
+            self.plot_params["title"] = "inclination = {:03}°".format(int(a))
             fig_, ax_ = func(direct_r, ghost_r, ax_lim=self.plot_params["ax_lim"])
             name = self.plot_params["title"].replace(" ", "_")
             name = name.replace("°", "")
@@ -351,9 +354,10 @@ class BlackHole:
     def plot_isoredshifts(self, redshifts=None, plot_core=False):
         if redshifts is None:
             redshifts = [-0.2, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
+
         _fig, _ax = self.get_figure()  # make new figure
 
-        bh.calc_isoredshifts(redshifts=redshifts).values()
+        self.calc_isoredshifts(redshifts=redshifts).values()
 
         for redshift, irz in self.isoredshifts.items():
             r_w_s, r_wo_s = irz.split_co_on_solutions()
@@ -380,7 +384,7 @@ class BlackHole:
         if plot_core:
             _ax = self.plot_apparent_inner_edge(_ax, linestyle="-")
         plt.suptitle("Isoredshift lines for M={}".format(self.M))
-        plt.show()
+        plt.close()
         return _fig, _ax
 
     def sample_points(self, n_points=1000, f=None, f2=None):
@@ -400,8 +404,10 @@ class BlackHole:
         """
         if f is None:
             f = f"Points/points_incl={int(self.t * 180 / np.pi)}.csv"
+
         if f2 is None:
             f2 = f"Points/points_secondary_incl={int(self.t * 180 / np.pi)}.csv"
+
         df = (
             pd.read_csv(f, index_col=0)
             if os.path.exists("./{}".format(f))
@@ -409,6 +415,7 @@ class BlackHole:
                 columns=["X", "Y", "impact_parameter", "angle", "z_factor", "flux_o"]
             )
         )
+
         df2 = (
             pd.read_csv(f2, index_col=0)
             if os.path.exists("./{}".format(f2))
@@ -419,7 +426,9 @@ class BlackHole:
 
         min_radius_ = self.disk_inner_edge
         max_radius_ = self.disk_outer_edge
+
         t = tqdm(range(n_points), desc="Sampling points for direct and ghost image")
+
         for _ in t:
             t.update(1)
             # r = minR_ + maxR_ * np.sqrt(np.random.random())  # uniformly sampling a circle's surface
@@ -471,7 +480,9 @@ class BlackHole:
                         ),
                     ]
                 )
+
         df.to_csv(f)
+
         df2.to_csv(f2)
 
     def plot_points(self, power_scale=0.9, levels=100):
@@ -519,6 +530,7 @@ class BlackHole:
                     for b_, a_ in zip(points["impact_parameter"], points["angle"])
                 ]
             ]
+
             points_outer = points.iloc[
                 [
                     b_ > self.get_apparent_outer_edge_radius(a_ + np.pi)
@@ -532,6 +544,10 @@ class BlackHole:
                     (abs(fl + _min_flux) / (_max_flux + _min_flux)) ** _power_scale
                     for fl in points_["flux_o"]
                 ]
+
+                print(i, len(points_["X"]))
+                print(i, len(points_["Y"]))
+
                 _ax.tricontourf(
                     points_["X"],
                     [-e for e in points_["Y"]],
@@ -542,14 +558,17 @@ class BlackHole:
                     nchunk=2,
                     zorder=1 - i,
                 )
+
             x, y = self.apparent_inner_edge(cartesian=True)
             _ax.fill_between(
                 x, y, color="black", zorder=1
             )  # to fill Delauney triangulation artefacts with black
+
             x, y = self.calc_apparent_outer_disk_edge().cartesian_co
             _ax.fill_between(
                 x, y, color="black", zorder=0
             )  # to fill Delauney triangulation artefacts with black
+
             return _ax
 
         _fig, _ax = self.get_figure()
@@ -565,10 +584,13 @@ class BlackHole:
                 zorder=4,
             )
 
-        points1 = pd.read_csv(f"Points/points_incl={round(self.t * 180 / np.pi)}.csv")
+        points1 = pd.read_csv(f"Points/points_incl={round(self.old_inclination)}.csv")
+        print(points1.shape)
         points2 = pd.read_csv(
-            f"Points/points_secondary_incl={round(self.t * 180 / np.pi)}.csv"
+            f"Points/points_secondary_incl={round(self.old_inclination)}.csv"
         )
+        print(points2.shape)
+
         max_flux = max(max(points1["flux_o"]), max(points2["flux_o"]))
         min_flux = 0
 
@@ -581,7 +603,8 @@ class BlackHole:
         plt.savefig(
             "SampledPoints_incl={}.png".format(self.t), dpi=300, facecolor="black"
         )
-        plt.show()
+        plt.close()
+
         return _fig, _ax
 
     def plot_isoredshifts_from_points(self, levels=None, extension="png"):
@@ -604,12 +627,15 @@ class BlackHole:
             ]
 
         _fig, _ax = self.get_figure()
-        points = pd.read_csv(f"points_incl={int(round(self.t * 180 / np.pi))}.csv")
+
+        #points = pd.read_csv(f"points_incl={int(round(self.t * 180 / np.pi))}.csv")
+        points = pd.read_csv(f"Points/points_incl={int(round(self.old_inclination))}.csv")
         br = self.calc_apparent_inner_disk_edge()
         color_map = plt.get_cmap("RdBu_r")
 
         # points1 = addBlackRing(self, points1)
         levels_ = [-0.2, -0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.75]
+
         _ax.tricontour(
             points["X"],
             points["Y"] if self.t <= np.pi / 2 else [-e for e in points["Y"]],
@@ -622,7 +648,7 @@ class BlackHole:
             linewidths=2,
         )
         _ax.fill_between(br.X, br.Y, color="black", zorder=2)
-        plt.show()
+        plt.close()
         _fig.savefig(
             f"Plots/Isoredshifts_incl={str(int(180 * self.t / np.pi)).zfill(3)}.{extension}",
             facecolor="black",
@@ -760,7 +786,7 @@ class Isoradial:
         self.calculate_coordinates()
         self.calc_redshift_factors()
 
-    def find_angle(self, z) -> [int]:
+    def find_angle(self, z) -> int:
         """Returns angle at which the isoradial redshift equals some value z
         Args:
             z: The redshift value z. Do not confuse with redshift factor 1 + z"""
@@ -869,7 +895,7 @@ class Isoradial:
         if show:
             # ax.autoscale_view(scalex=False)
             # ax.set_ylim([0, ax.get_ylim()[1] * 1.1])
-            plt.show()
+            plt.close()
         return plt, ir_ax
 
     def calc_between(self, ind):
@@ -929,7 +955,7 @@ class Isoradial:
             it += 1
             # plt.plot(self.angles, [redshift + 1 - z_ for z_ in self.redshift_factors])
             # plt.axvline(0)
-            # plt.show()
+            # plt.close()
         return diff
 
     def calc_redshift_location_on_ir(self, redshift, cartesian=False):
@@ -992,7 +1018,7 @@ class Isoradial:
         plt.title("Redshift values for isoradial\nR={} | M = {}".format(20, M))
         ax_.set_xlim([0, 2 * np.pi])
         if show:
-            plt.show()
+            plt.close()
 
 
 class Isoredshift:
@@ -1167,7 +1193,7 @@ class Isoredshift:
             plt.scatter(*order_around)
             plt.plot([0, order_around[0]], [0, order_around[1]])
             plt.title(plot_title)
-            plt.show()
+            plt.close()
             plt.close("all")
 
         self.co = self.angles, self.radii = [e[0] for e in sorted_co], [
