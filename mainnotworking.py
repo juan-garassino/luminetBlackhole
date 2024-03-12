@@ -3,7 +3,7 @@ import os
 import datetime
 import numpy as np
 from colorama import Fore, Style
-from params import params
+from Luminet.params import params
 
 
 def generate_inclinations(incl, num_inclinations=None, random=False, step=False):
@@ -22,6 +22,7 @@ def generate_inclinations(incl, num_inclinations=None, random=False, step=False)
 
     return inclinations
 
+
 incl = None
 
 M = 1.0
@@ -33,11 +34,11 @@ inclinations = generate_inclinations(incl, num_inclinations, random=True, step=F
 print(f"\n{Fore.YELLOW}Inclinations: {inclinations}{Style.RESET_ALL}")
 
 # Create folders for SVG and PNG files
-svg_folder = "svg_files"
+svg_folder = "Results/svg_files"
 
 os.makedirs(svg_folder, exist_ok=True)
 
-png_folder = "png_files"
+png_folder = "Results/png_files"
 
 os.makedirs(png_folder, exist_ok=True)
 
@@ -55,10 +56,9 @@ isoradial_redshift = True
 facecolor = "#1a1a1a"  # Change the value to the desired facecolor
 
 for incl in inclinations:
-
     incl = int(incl)
 
-    print(f'\nWorking on inclination {incl}')
+    print(f"\nWorking on inclination {incl}")
 
     blackhole = BlackHole(inclination=incl, mass=M)
 
@@ -71,11 +71,10 @@ for incl in inclinations:
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
     if isoradials:
-
         # Generate a random step size
         step_size = np.random.randint(1, 10)
 
-        print(f'\nWorking on step size {step_size}')
+        print(f"\nWorking on step size {step_size}")
 
         fig, ax = blackhole.plot_isoradials(
             np.arange(5, 101, step_size).tolist(), np.arange(5, 101, step_size).tolist()
@@ -91,7 +90,6 @@ for incl in inclinations:
             plt.close(fig)
 
     if isoredshifts:
-
         M = 1.0
 
         incl = 76
@@ -106,7 +104,7 @@ for incl in inclinations:
 
         sample_size = np.random.randint(10, 25)
 
-        print(f'\nWorking on sample size {sample_size}')
+        print(f"\nWorking on sample size {sample_size}")
 
         lower_bound = np.random.uniform(-0.99, -0.69, 1)
 
@@ -116,7 +114,7 @@ for incl in inclinations:
 
         rounded_values = np.round(values, decimals=2).flatten().tolist()
 
-        print(f'\nWorking on isoredshifts {rounded_values}')
+        print(f"\nWorking on isoredshifts {rounded_values}")
 
         fig, ax = bh.plot_isoredshifts(
             redshifts=rounded_values,
@@ -153,7 +151,7 @@ for incl in inclinations:
         )
         file_name = f"disk_points_{incl}_{timestamp}.png"
         file_path = os.path.join(png_folder, file_name)
-        fig.savefig(file_path, format="png", facecolor='#000000')
+        fig.savefig(file_path, format="png", facecolor="#000000")
         plt.close(fig)
 
     if isoredshifts_from_points:
