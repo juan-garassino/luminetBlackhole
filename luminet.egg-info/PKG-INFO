@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: luminet
+Version: 0.0.0
+Summary: package description
+Requires-Dist: matplotlib==3.5.2
+Requires-Dist: numpy==1.22.4
+Requires-Dist: pandas==1.4.2
+Requires-Dist: pytest==7.1.2
+Requires-Dist: scipy==1.8.1
+Requires-Dist: tqdm==4.64.0
+Requires-Dist: black
+Requires-Dist: colorama
